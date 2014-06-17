@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="comet\channel.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="comet\comet-server.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="util\config.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="util\log.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="comet\server.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="comet\subscriber.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="build.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="comet\channel.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="util\config.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="libevent\event.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="util\file.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="util\ip_filter.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="util\list.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="util\log.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="util\objpool.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="util\strings.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{de634915-9df2-44f1-b9a7-d4cf34b67c38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{bc5bb77f-9cdc-436b-8ecd-91b6d4618a3b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
