@@ -14,10 +14,6 @@ Subscriber::Subscriber(){
 }
 
 Subscriber::~Subscriber(){
-	if (req != NULL) {
-		evhttp_request_free(req);
-		req = NULL;
-	}
 }
 
 static void on_sub_disconnect(struct evhttp_connection *evcon, void *arg){
@@ -99,8 +95,12 @@ void Subscriber::close(){
 	if (req->evcon){
 		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
 		evhttp_send_reply_end(req);
+		channel->serv->sub_end(this);
+	} else {
+		struct evhttp_request *tempReq = req;
+		channel->serv->sub_end(this);
+		evhttp_request_free(tempReq);
 	}
-	channel->serv->sub_end(this);
 }
 
 void Subscriber::noop(){

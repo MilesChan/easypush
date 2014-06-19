@@ -39,12 +39,12 @@ boolean g_bWSAInited = WSAInit();
 boolean WSAInit() {
 	WORD  request;
 	WSADATA  ws;
-	request = MAKEWORD(1,1);
+	request = MAKEWORD(2,2);
 	int err = WSAStartup(request,&ws);
 	if(err != 0) {
 		return false;
 	}
-	if(LOBYTE(ws.wVersion) != 1||HIBYTE(ws.wVersion) != 1) {
+	if(LOBYTE(ws.wVersion) != 2||HIBYTE(ws.wVersion) != 2) {
 		WSACleanup(); 
 		return false;
 	}

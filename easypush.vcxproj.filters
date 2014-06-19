@@ -71,5 +71,8 @@
     <Filter Include="src">
       <UniqueIdentifier>{bc5bb77f-9cdc-436b-8ecd-91b6d4618a3b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="libevent">
+      <UniqueIdentifier>{1ab79e0c-a296-4a31-89e5-ce6da50d6c94}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
