@@ -14,6 +14,10 @@ Subscriber::Subscriber(){
 }
 
 Subscriber::~Subscriber(){
+	if (req != NULL) {
+		evhttp_request_free(req);
+		req = NULL;
+	}
 }
 
 static void on_sub_disconnect(struct evhttp_connection *evcon, void *arg){
@@ -92,12 +96,11 @@ void Subscriber::send_old_msgs(){
 }
 
 void Subscriber::close(){
-	if(req->evcon){
+	if (req->evcon){
 		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
+		evhttp_send_reply_end(req);
 	}
 	channel->serv->sub_end(this);
-	evhttp_send_reply_end(req);	
-	delete this;
 }
 
 void Subscriber::noop(){

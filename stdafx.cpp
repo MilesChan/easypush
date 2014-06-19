@@ -14,6 +14,7 @@
 #pragma comment(lib,"libevent\\MTd\\libevent.lib")
 #pragma comment(lib,"libevent\\MTd\\libevent_core.lib")
 #pragma comment(lib,"libevent\\MTd\\libevent_extras.lib")
+#pragma comment(linker, "/NODEFAULTLIB:\"msvcprtd.lib.lib\"")
 #else
 #pragma comment(lib,"libevent\\MT\\libevent.lib")
 #pragma comment(lib,"libevent\\MT\\libevent_core.lib")
