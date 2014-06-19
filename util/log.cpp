@@ -1,6 +1,5 @@
 #include "log.h"
 #include <time.h>
-#include <strsafe.h>
 
 static Logger logger;
 
@@ -191,12 +190,7 @@ int Logger::logv(int level, const char *fmt, va_list ap){
 	ptr += LEVEL_NAME_LEN;
 
 	int space = sizeof(buf) - (ptr - buf) - 10;
-	__try {
-		len = vsnprintf_s(ptr, space, space, fmt, ap);
-	} __except(EXCEPTION_EXECUTE_HANDLER) {
-		error("exception ocurred in Logger::logv,level=%d ",level);
-		return -1;
-	}
+	len = vsnprintf(ptr, space, fmt, ap);
 	
 	if(len < 0){
 		return -1;

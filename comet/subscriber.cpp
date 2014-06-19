@@ -95,8 +95,9 @@ void Subscriber::close(){
 	if(req->evcon){
 		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
 	}
-	evhttp_send_reply_end(req);
 	channel->serv->sub_end(this);
+	evhttp_send_reply_end(req);	
+	delete this;
 }
 
 void Subscriber::noop(){
