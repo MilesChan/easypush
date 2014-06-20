@@ -25,13 +25,13 @@
         1. start easypush server
     </p>
     <p>
-        ./easypush.exe icomet.conf
+        ./easypush_server.exe icomet.conf
     </p>
     <p>
         explain:
     </p>
     <p>
-        please copy icomet.conf to the directory where easypush.exe is
+        please copy icomet.conf to the directory where easypush_server.exe is
     </p>
     <p>
         2. subscribe a channel

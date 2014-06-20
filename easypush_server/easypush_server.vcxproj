@@ -14,7 +14,7 @@
     <ProjectGuid>{6ADFAED5-E7FC-4F52-8D4D-2B60D75DD5A5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>ConsoleApplication1</RootNamespace>
-    <ProjectName>easypush</ProjectName>
+    <ProjectName>easypush_server</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
