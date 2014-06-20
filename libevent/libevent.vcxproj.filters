@@ -16,9 +16,6 @@
     <Filter Include="Header Files\event2">
       <UniqueIdentifier>{ee28e55d-8368-4476-956f-cb5965ad55ea}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\test">
-      <UniqueIdentifier>{9d800cb0-41e0-44ca-862f-43f565843c71}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -244,24 +241,6 @@
     </ClInclude>
     <ClInclude Include="include\event2\util.h">
       <Filter>Header Files\event2</Filter>
-    </ClInclude>
-    <ClInclude Include="test\regress.gen.h">
-      <Filter>Header Files\test</Filter>
-    </ClInclude>
-    <ClInclude Include="test\regress.h">
-      <Filter>Header Files\test</Filter>
-    </ClInclude>
-    <ClInclude Include="test\regress_testutils.h">
-      <Filter>Header Files\test</Filter>
-    </ClInclude>
-    <ClInclude Include="test\tinytest.h">
-      <Filter>Header Files\test</Filter>
-    </ClInclude>
-    <ClInclude Include="test\tinytest_local.h">
-      <Filter>Header Files\test</Filter>
-    </ClInclude>
-    <ClInclude Include="test\tinytest_macros.h">
-      <Filter>Header Files\test</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

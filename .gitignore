@@ -38,6 +38,7 @@ Icon
 #Visual Studio middle files
 *.ilk
 *.lastbuildstate
+*.unsuccessfulbuild
 *.obj
 *.pch
 *.pdb

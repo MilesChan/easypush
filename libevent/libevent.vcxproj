@@ -163,12 +163,6 @@
     <ClInclude Include="mm-internal.h" />
     <ClInclude Include="ratelim-internal.h" />
     <ClInclude Include="strlcpy-internal.h" />
-    <ClInclude Include="test\regress.gen.h" />
-    <ClInclude Include="test\regress.h" />
-    <ClInclude Include="test\regress_testutils.h" />
-    <ClInclude Include="test\tinytest.h" />
-    <ClInclude Include="test\tinytest_local.h" />
-    <ClInclude Include="test\tinytest_macros.h" />
     <ClInclude Include="util-internal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
