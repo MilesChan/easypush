@@ -1,7 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "easypush", "easypush.vcxproj", "{6ADFAED5-E7FC-4F52-8D4D-2B60D75DD5A5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "easypush", "easypush_server\easypush_server.vcxproj", "{6ADFAED5-E7FC-4F52-8D4D-2B60D75DD5A5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9D46F68D-D828-4504-A541-DEB3DA52DE68} = {9D46F68D-D828-4504-A541-DEB3DA52DE68}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libevent", "libevent\libevent.vcxproj", "{9D46F68D-D828-4504-A541-DEB3DA52DE68}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,6 +18,10 @@ Global
 		{6ADFAED5-E7FC-4F52-8D4D-2B60D75DD5A5}.Debug|Win32.Build.0 = Debug|Win32
 		{6ADFAED5-E7FC-4F52-8D4D-2B60D75DD5A5}.Release|Win32.ActiveCfg = Release|Win32
 		{6ADFAED5-E7FC-4F52-8D4D-2B60D75DD5A5}.Release|Win32.Build.0 = Release|Win32
+		{9D46F68D-D828-4504-A541-DEB3DA52DE68}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9D46F68D-D828-4504-A541-DEB3DA52DE68}.Debug|Win32.Build.0 = Debug|Win32
+		{9D46F68D-D828-4504-A541-DEB3DA52DE68}.Release|Win32.ActiveCfg = Release|Win32
+		{9D46F68D-D828-4504-A541-DEB3DA52DE68}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -34,7 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef _EVENT_HAVE_SYS_SOCKET_H
-#include <winsock.h>
+#include <sys/socket.h>
 #endif
 #include "event2/util.h"
 
@@ -45,9 +45,12 @@ extern "C" {
 #endif
 
 /* If we need magic to say "inline", get it for free internally. */
+
 #ifdef _EVENT_inline
-#define inline _EVENT_inline
+//The C++ Standard Library forbids macroizing keywords
+//#define inline _EVENT_inline
 #endif
+
 #ifdef _EVENT___func__
 #define __func__ _EVENT___func__
 #endif

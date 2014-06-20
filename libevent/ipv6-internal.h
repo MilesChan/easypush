@@ -32,7 +32,7 @@
 
 #include <sys/types.h>
 #ifdef _EVENT_HAVE_SYS_SOCKET_H
-#include <winsock.h>
+#include <sys/socket.h>
 #endif
 #include "event2/event-config.h"
 #include "event2/util.h"

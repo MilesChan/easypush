@@ -49,3 +49,4 @@ Icon
 *.opensdf
 *.ipch
 *.suo
+libevent.lib
