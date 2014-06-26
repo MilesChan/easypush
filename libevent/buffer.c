@@ -2848,13 +2848,14 @@ evbuffer_add_file(struct evbuffer *outbuf, int fd,
 		/* we add everything to a temporary buffer, so that we
 		 * can abort without side effects if the read fails.
 		 */
-		while (length) {
+		while (length > 0) {
 			read = evbuffer_readfile(tmp, fd, (ev_ssize_t)length);
 			if (read == -1) {
 				evbuffer_free(tmp);
 				return (-1);
+			} else if (read <= 0) { // opps,dead loop on windows, bug of libevent?
+				break;
 			}
-
 			length -= read;
 		}
 

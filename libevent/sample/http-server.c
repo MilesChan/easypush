@@ -52,7 +52,8 @@
 #define fstat _fstat
 #define open _open
 #define close _close
-#define O_RDONLY _O_RDONLY
+//#define O_RDONLY _O_RDONLY
+#define O_RDONLY _O_RDONLY | _O_BINARY // opps,bug on windows, "\r\n"
 #endif
 
 char uri_root[512];
@@ -314,13 +315,13 @@ syntax(void)
 }
 
 int
-main(int argc, char **argv)
+main5(int argc, char **argv)
 {
 	struct event_base *base;
 	struct evhttp *http;
 	struct evhttp_bound_socket *handle;
 
-	unsigned short port = 0;
+	unsigned short port = 9995;
 #ifdef WIN32
 	WSADATA WSAData;
 	WSAStartup(0x101, &WSAData);

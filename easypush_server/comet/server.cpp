@@ -156,10 +156,11 @@ int Server::psub_end(PresenceSubscriber *psub){
 	struct evhttp_request *req = psub->req;
 	if(req->evcon){
 		evhttp_connection_set_closecb(req->evcon, NULL, NULL);
+		evhttp_send_reply_end(req);
 	}
-	evhttp_send_reply_end(req);
 	psubs.remove(psub);
 	log_info("%s:%d psub_end, psubs: %d", req->remote_host, req->remote_port, psubs.size);
+	evhttp_request_free(req);
 	return 0;
 }
 
