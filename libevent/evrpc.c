@@ -25,8 +25,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "event2/event-config.h"
+#include "evconfig-private.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <windows.h>
@@ -34,16 +35,16 @@
 #endif
 
 #include <sys/types.h>
-#ifndef WIN32
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
-#ifdef _EVENT_HAVE_SYS_TIME_H
+#ifdef EVENT__HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
 #include <sys/queue.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifndef WIN32
+#ifndef _WIN32
 #include <unistd.h>
 #endif
 #include <errno.h>
@@ -70,7 +71,7 @@
 struct evrpc_base *
 evrpc_init(struct evhttp *http_server)
 {
-	struct evrpc_base* base = mm_calloc(1, sizeof(struct evrpc_base));
+	struct evrpc_base* base = (struct evrpc_base*)mm_calloc(1, sizeof(struct evrpc_base));
 	if (base == NULL)
 		return (NULL);
 
@@ -121,7 +122,7 @@ evrpc_add_hook(void *vbase,
     int (*cb)(void *, struct evhttp_request *, struct evbuffer *, void *),
     void *cb_arg)
 {
-	struct _evrpc_hooks *base = vbase;
+	struct evrpc_hooks_ *base = (struct evrpc_hooks_ *)vbase;
 	struct evrpc_hook_list *head = NULL;
 	struct evrpc_hook *hook = NULL;
 	switch (hook_type) {
@@ -135,7 +136,7 @@ evrpc_add_hook(void *vbase,
 		EVUTIL_ASSERT(hook_type == EVRPC_INPUT || hook_type == EVRPC_OUTPUT);
 	}
 
-	hook = mm_calloc(1, sizeof(struct evrpc_hook));
+	hook = (struct evrpc_hook *)mm_calloc(1, sizeof(struct evrpc_hook));
 	EVUTIL_ASSERT(hook != NULL);
 
 	hook->process = cb;
@@ -167,7 +168,7 @@ evrpc_remove_hook_internal(struct evrpc_hook_list *head, void *handle)
 int
 evrpc_remove_hook(void *vbase, enum EVRPC_HOOK_TYPE hook_type, void *handle)
 {
-	struct _evrpc_hooks *base = vbase;
+	struct evrpc_hooks_ *base = (struct evrpc_hooks_ *)vbase;
 	struct evrpc_hook_list *head = NULL;
 	switch (hook_type) {
 	case EVRPC_INPUT:
@@ -213,7 +214,7 @@ evrpc_construct_uri(const char *uri)
 	size_t constructed_uri_len;
 
 	constructed_uri_len = strlen(EVRPC_URI_PREFIX) + strlen(uri) + 1;
-	if ((constructed_uri = mm_malloc(constructed_uri_len)) == NULL)
+	if ((constructed_uri = (char*)mm_malloc(constructed_uri_len)) == NULL)
 		event_err(1, "%s: failed to register rpc at %s",
 		    __func__, uri);
 	memcpy(constructed_uri, EVRPC_URI_PREFIX, strlen(EVRPC_URI_PREFIX));
@@ -283,7 +284,7 @@ static void evrpc_request_cb_closure(void *, enum EVRPC_HOOK_RESULT);
 static void
 evrpc_request_cb(struct evhttp_request *req, void *arg)
 {
-	struct evrpc *rpc = arg;
+	struct evrpc *rpc = (struct evrpc *)arg;
 	struct evrpc_req_generic *rpc_state = NULL;
 
 	/* let's verify the outside parameters */
@@ -291,7 +292,7 @@ evrpc_request_cb(struct evhttp_request *req, void *arg)
 	    evbuffer_get_length(req->input_buffer) <= 0)
 		goto error;
 
-	rpc_state = mm_calloc(1, sizeof(struct evrpc_req_generic));
+	rpc_state = (struct evrpc_req_generic *)mm_calloc(1, sizeof(struct evrpc_req_generic));
 	if (rpc_state == NULL)
 		goto error;
 	rpc_state->rpc = rpc;
@@ -301,7 +302,7 @@ evrpc_request_cb(struct evhttp_request *req, void *arg)
 	if (TAILQ_FIRST(&rpc->base->input_hooks) != NULL) {
 		int hook_res;
 
-		evrpc_hook_associate_meta(&rpc_state->hook_meta, req->evcon);
+		evrpc_hook_associate_meta_(&rpc_state->hook_meta, req->evcon);
 
 		/*
 		 * allow hooks to modify the outgoing request
@@ -328,8 +329,7 @@ evrpc_request_cb(struct evhttp_request *req, void *arg)
 	return;
 
 error:
-	if (rpc_state != NULL)
-		evrpc_reqstate_free(rpc_state);
+	evrpc_reqstate_free_(rpc_state);
 	evhttp_send_error(req, HTTP_SERVUNAVAIL, NULL);
 	return;
 }
@@ -337,7 +337,7 @@ error:
 static void
 evrpc_request_cb_closure(void *arg, enum EVRPC_HOOK_RESULT hook_res)
 {
-	struct evrpc_req_generic *rpc_state = arg;
+	struct evrpc_req_generic *rpc_state = (struct evrpc_req_generic *)arg;
 	struct evrpc *rpc;
 	struct evhttp_request *req;
 
@@ -371,15 +371,14 @@ evrpc_request_cb_closure(void *arg, enum EVRPC_HOOK_RESULT hook_res)
 	return;
 
 error:
-	if (rpc_state != NULL)
-		evrpc_reqstate_free(rpc_state);
+	evrpc_reqstate_free_(rpc_state);
 	evhttp_send_error(req, HTTP_SERVUNAVAIL, NULL);
 	return;
 }
 
 
 void
-evrpc_reqstate_free(struct evrpc_req_generic* rpc_state)
+evrpc_reqstate_free_(struct evrpc_req_generic* rpc_state)
 {
 	struct evrpc *rpc;
 	EVUTIL_ASSERT(rpc_state != NULL);
@@ -387,7 +386,7 @@ evrpc_reqstate_free(struct evrpc_req_generic* rpc_state)
 
 	/* clean up all memory */
 	if (rpc_state->hook_meta != NULL)
-		evrpc_hook_context_free(rpc_state->hook_meta);
+		evrpc_hook_context_free_(rpc_state->hook_meta);
 	if (rpc_state->request != NULL)
 		rpc->request_free(rpc_state->request);
 	if (rpc_state->reply != NULL)
@@ -427,7 +426,7 @@ evrpc_request_done(struct evrpc_req_generic *rpc_state)
 	if (TAILQ_FIRST(&rpc->base->output_hooks) != NULL) {
 		int hook_res;
 
-		evrpc_hook_associate_meta(&rpc_state->hook_meta, req->evcon);
+		evrpc_hook_associate_meta_(&rpc_state->hook_meta, req->evcon);
 
 		/* do hook based tweaks to the request */
 		hook_res = evrpc_process_hooks(&rpc->base->output_hooks,
@@ -453,8 +452,7 @@ evrpc_request_done(struct evrpc_req_generic *rpc_state)
 	return;
 
 error:
-	if (rpc_state != NULL)
-		evrpc_reqstate_free(rpc_state);
+	evrpc_reqstate_free_(rpc_state);
 	evhttp_send_error(req, HTTP_SERVUNAVAIL, NULL);
 	return;
 }
@@ -474,7 +472,7 @@ evrpc_get_reply(struct evrpc_req_generic *req)
 static void
 evrpc_request_done_closure(void *arg, enum EVRPC_HOOK_RESULT hook_res)
 {
-	struct evrpc_req_generic *rpc_state = arg;
+	struct evrpc_req_generic *rpc_state = (struct evrpc_req_generic *)arg;
 	struct evhttp_request *req;
 	EVUTIL_ASSERT(rpc_state);
 	req = rpc_state->http_req;
@@ -489,13 +487,12 @@ evrpc_request_done_closure(void *arg, enum EVRPC_HOOK_RESULT hook_res)
 	}
 	evhttp_send_reply(req, HTTP_OK, "OK", rpc_state->rpc_data);
 
-	evrpc_reqstate_free(rpc_state);
+	evrpc_reqstate_free_(rpc_state);
 
 	return;
 
 error:
-	if (rpc_state != NULL)
-		evrpc_reqstate_free(rpc_state);
+	evrpc_reqstate_free_(rpc_state);
 	evhttp_send_error(req, HTTP_SERVUNAVAIL, NULL);
 	return;
 }
@@ -509,7 +506,7 @@ static int evrpc_schedule_request(struct evhttp_connection *connection,
 struct evrpc_pool *
 evrpc_pool_new(struct event_base *base)
 {
-	struct evrpc_pool *pool = mm_calloc(1, sizeof(struct evrpc_pool));
+	struct evrpc_pool *pool = (struct evrpc_pool *)mm_calloc(1, sizeof(struct evrpc_pool));
 	if (pool == NULL)
 		return (NULL);
 
@@ -531,7 +528,7 @@ static void
 evrpc_request_wrapper_free(struct evrpc_request_wrapper *request)
 {
 	if (request->hook_meta != NULL)
-		evrpc_hook_context_free(request->hook_meta);
+		evrpc_hook_context_free_(request->hook_meta);
 	mm_free(request->name);
 	mm_free(request);
 }
@@ -595,8 +592,8 @@ evrpc_pool_add_connection(struct evrpc_pool *pool,
 	 * unless a timeout was specifically set for a connection,
 	 * the connection inherits the timeout from the pool.
 	 */
-	if (connection->timeout == -1)
-		connection->timeout = pool->timeout;
+	if (!evutil_timerisset(&connection->timeout))
+		evhttp_connection_set_timeout(connection, pool->timeout);
 
 	/*
 	 * if we have any requests pending, schedule them with the new
@@ -623,7 +620,7 @@ evrpc_pool_set_timeout(struct evrpc_pool *pool, int timeout_in_secs)
 {
 	struct evhttp_connection *evcon;
 	TAILQ_FOREACH(evcon, &pool->connections, next) {
-		evcon->timeout = timeout_in_secs;
+		evhttp_connection_set_timeout(evcon, timeout_in_secs);
 	}
 	pool->timeout = timeout_in_secs;
 }
@@ -680,7 +677,7 @@ evrpc_schedule_request(struct evhttp_connection *connection,
 	if (TAILQ_FIRST(&pool->output_hooks) != NULL) {
 		int hook_res;
 
-		evrpc_hook_associate_meta(&ctx->hook_meta, connection);
+		evrpc_hook_associate_meta_(&ctx->hook_meta, connection);
 
 		/* apply hooks to the outgoing request */
 		hook_res = evrpc_process_hooks(&pool->output_hooks,
@@ -719,7 +716,7 @@ error:
 static void
 evrpc_schedule_request_closure(void *arg, enum EVRPC_HOOK_RESULT hook_res)
 {
-	struct evrpc_request_wrapper *ctx = arg;
+	struct evrpc_request_wrapper *ctx = (struct evrpc_request_wrapper *)arg;
 	struct evhttp_connection *connection = ctx->evcon;
 	struct evhttp_request *req = ctx->req;
 	struct evrpc_pool *pool = ctx->pool;
@@ -765,8 +762,8 @@ static int
 evrpc_pause_request(void *vbase, void *ctx,
     void (*cb)(void *, enum EVRPC_HOOK_RESULT))
 {
-	struct _evrpc_hooks *base = vbase;
-	struct evrpc_hook_ctx *pause = mm_malloc(sizeof(*pause));
+	struct evrpc_hooks_ *base = (struct evrpc_hooks_ *)vbase;
+	struct evrpc_hook_ctx *pause = (struct evrpc_hook_ctx *)mm_malloc(sizeof(*pause));
 	if (pause == NULL)
 		return (-1);
 
@@ -780,7 +777,7 @@ evrpc_pause_request(void *vbase, void *ctx,
 int
 evrpc_resume_request(void *vbase, void *ctx, enum EVRPC_HOOK_RESULT res)
 {
-	struct _evrpc_hooks *base = vbase;
+	struct evrpc_hooks_ *base = (struct evrpc_hooks_ *)vbase;
 	struct evrpc_pause_list *head = &base->pause_requests;
 	struct evrpc_hook_ctx *pause;
 
@@ -861,7 +858,7 @@ evrpc_reply_done_closure(void *, enum EVRPC_HOOK_RESULT);
 static void
 evrpc_reply_done(struct evhttp_request *req, void *arg)
 {
-	struct evrpc_request_wrapper *ctx = arg;
+	struct evrpc_request_wrapper *ctx = (struct evrpc_request_wrapper *)arg;
 	struct evrpc_pool *pool = ctx->pool;
 	int hook_res = EVRPC_CONTINUE;
 
@@ -877,7 +874,7 @@ evrpc_reply_done(struct evhttp_request *req, void *arg)
 	}
 
 	if (TAILQ_FIRST(&pool->input_hooks) != NULL) {
-		evrpc_hook_associate_meta(&ctx->hook_meta, ctx->evcon);
+		evrpc_hook_associate_meta_(&ctx->hook_meta, ctx->evcon);
 
 		/* apply hooks to the incoming request */
 		hook_res = evrpc_process_hooks(&pool->input_hooks,
@@ -907,7 +904,7 @@ evrpc_reply_done(struct evhttp_request *req, void *arg)
 		}
 	}
 
-	evrpc_reply_done_closure(ctx, hook_res);
+	evrpc_reply_done_closure(ctx, (enum EVRPC_HOOK_RESULT)hook_res);
 
 	/* http request is being freed by underlying layer */
 }
@@ -915,7 +912,7 @@ evrpc_reply_done(struct evhttp_request *req, void *arg)
 static void
 evrpc_reply_done_closure(void *arg, enum EVRPC_HOOK_RESULT hook_res)
 {
-	struct evrpc_request_wrapper *ctx = arg;
+	struct evrpc_request_wrapper *ctx = (struct evrpc_request_wrapper *)arg;
 	struct evhttp_request *req = ctx->req;
 	struct evrpc_pool *pool = ctx->pool;
 	struct evrpc_status status;
@@ -972,11 +969,11 @@ evrpc_pool_schedule(struct evrpc_pool *pool)
 static void
 evrpc_request_timeout(evutil_socket_t fd, short what, void *arg)
 {
-	struct evrpc_request_wrapper *ctx = arg;
+	struct evrpc_request_wrapper *ctx = (struct evrpc_request_wrapper *)arg;
 	struct evhttp_connection *evcon = ctx->evcon;
 	EVUTIL_ASSERT(evcon != NULL);
 
-	evhttp_connection_fail(evcon, EVCON_HTTP_TIMEOUT);
+	evhttp_connection_fail_(evcon, EVREQ_HTTP_TIMEOUT);
 }
 
 /*
@@ -998,10 +995,10 @@ evrpc_meta_data_free(struct evrpc_meta_list *meta_data)
 }
 
 static struct evrpc_hook_meta *
-evrpc_hook_meta_new(void)
+evrpc_hook_meta_new_(void)
 {
 	struct evrpc_hook_meta *ctx;
-	ctx = mm_malloc(sizeof(struct evrpc_hook_meta));
+	ctx = (struct evrpc_hook_meta *)mm_malloc(sizeof(struct evrpc_hook_meta));
 	EVUTIL_ASSERT(ctx != NULL);
 
 	TAILQ_INIT(&ctx->meta_data);
@@ -1011,17 +1008,17 @@ evrpc_hook_meta_new(void)
 }
 
 static void
-evrpc_hook_associate_meta(struct evrpc_hook_meta **pctx,
+evrpc_hook_associate_meta_(struct evrpc_hook_meta **pctx,
     struct evhttp_connection *evcon)
 {
 	struct evrpc_hook_meta *ctx = *pctx;
 	if (ctx == NULL)
-		*pctx = ctx = evrpc_hook_meta_new();
+		*pctx = ctx = evrpc_hook_meta_new_();
 	ctx->evcon = evcon;
 }
 
 static void
-evrpc_hook_context_free(struct evrpc_hook_meta *ctx)
+evrpc_hook_context_free_(struct evrpc_hook_meta *ctx)
 {
 	evrpc_meta_data_free(&ctx->meta_data);
 	mm_free(ctx);
@@ -1032,14 +1029,14 @@ void
 evrpc_hook_add_meta(void *ctx, const char *key,
     const void *data, size_t data_size)
 {
-	struct evrpc_request_wrapper *req = ctx;
+	struct evrpc_request_wrapper *req = (struct evrpc_request_wrapper *)ctx;
 	struct evrpc_hook_meta *store = NULL;
 	struct evrpc_meta *meta = NULL;
 
 	if ((store = req->hook_meta) == NULL)
-		store = req->hook_meta = evrpc_hook_meta_new();
+		store = req->hook_meta = evrpc_hook_meta_new_();
 
-	meta = mm_malloc(sizeof(struct evrpc_meta));
+	meta = (struct evrpc_meta *)mm_malloc(sizeof(struct evrpc_meta));
 	EVUTIL_ASSERT(meta != NULL);
 	meta->key = mm_strdup(key);
 	EVUTIL_ASSERT(meta->key != NULL);
@@ -1054,7 +1051,7 @@ evrpc_hook_add_meta(void *ctx, const char *key,
 int
 evrpc_hook_find_meta(void *ctx, const char *key, void **data, size_t *data_size)
 {
-	struct evrpc_request_wrapper *req = ctx;
+	struct evrpc_request_wrapper *req = (struct evrpc_request_wrapper *)ctx;
 	struct evrpc_meta *meta = NULL;
 
 	if (req->hook_meta == NULL)
@@ -1074,7 +1071,7 @@ evrpc_hook_find_meta(void *ctx, const char *key, void **data, size_t *data_size)
 struct evhttp_connection *
 evrpc_hook_get_connection(void *ctx)
 {
-	struct evrpc_request_wrapper *req = ctx;
+	struct evrpc_request_wrapper *req = (struct evrpc_request_wrapper *)ctx;
 	return (req->hook_meta != NULL ? req->hook_meta->evcon : NULL);
 }
 

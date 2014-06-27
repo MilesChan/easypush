@@ -7,8 +7,12 @@
  * need to know about these.
  */
 
-#ifndef _HTTP_INTERNAL_H_
-#define _HTTP_INTERNAL_H_
+#ifndef HTTP_INTERNAL_H_INCLUDED_
+#define HTTP_INTERNAL_H_INCLUDED_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "event2/event_struct.h"
 #include "util-internal.h"
@@ -29,20 +33,12 @@ enum message_read_status {
 	DATA_TOO_LONG = -3
 };
 
-enum evhttp_connection_error {
-	EVCON_HTTP_TIMEOUT,
-	EVCON_HTTP_EOF,
-	EVCON_HTTP_INVALID_HEADER,
-	EVCON_HTTP_BUFFER_ERROR,
-	EVCON_HTTP_REQUEST_CANCEL
-};
-
 struct evbuffer;
 struct addrinfo;
 struct evhttp_request;
 
 /* Indicates an unknown request method. */
-#define _EVHTTP_REQ_UNKNOWN (1<<15)
+#define EVHTTP_REQ_UNKNOWN_ (1<<15)
 
 enum evhttp_connection_state {
 	EVCON_DISCONNECTED,	/**< not currently connected not trying either*/
@@ -57,6 +53,8 @@ enum evhttp_connection_state {
 };
 
 struct event_base;
+
+TAILQ_HEAD(evcon_requestq, evhttp_request);
 
 /* A client or server connection. */
 struct evhttp_connection {
@@ -83,16 +81,19 @@ struct evhttp_connection {
 #define EVHTTP_CON_OUTGOING	0x0002  /* multiple requests possible */
 #define EVHTTP_CON_CLOSEDETECT  0x0004  /* detecting if persistent close */
 
-	int timeout;			/* timeout in seconds for events */
+	struct timeval timeout;		/* timeout for events */
 	int retry_cnt;			/* retry count */
 	int retry_max;			/* maximum number of retries */
+	struct timeval initial_retry_timeout; /* Timeout for low long to wait
+					       * after first failing attempt
+					       * before retry */
 
 	enum evhttp_connection_state state;
 
 	/* for server connections, the http server they are connected with */
 	struct evhttp *http_server;
 
-	TAILQ_HEAD(evcon_requestq, evhttp_request) requests;
+	struct evcon_requestq requests;
 
 	void (*cb)(struct evhttp_connection *, void *);
 	void *cb_arg;
@@ -100,10 +101,17 @@ struct evhttp_connection {
 	void (*closecb)(struct evhttp_connection *, void *);
 	void *closecb_arg;
 
-	struct deferred_cb read_more_deferred_cb;
+	struct event_callback read_more_deferred_cb;
 
 	struct event_base *base;
 	struct evdns_base *dns_base;
+
+	/* Saved conn_addr, to extract IP address from it.
+	 *
+	 * Because some servers may reset/close connection without waiting clients,
+	 * in that case we can't extract IP address even in close_cb.
+	 * So we need to save it, just after we connected to remote server. */
+	struct sockaddr_storage *conn_address;
 };
 
 /* A callback for an http server */
@@ -133,29 +141,35 @@ struct evhttp_server_alias {
 	char *alias; /* the server alias. */
 };
 
+TAILQ_HEAD(httpcbq, evhttp_cb);
+TAILQ_HEAD(boundq, evhttp_bound_socket);
+TAILQ_HEAD(vhostsq, evhttp);
+TAILQ_HEAD(aliasq, evhttp_server_alias);
+
 struct evhttp {
 	/* Next vhost, if this is a vhost. */
 	TAILQ_ENTRY(evhttp) next_vhost;
 
 	/* All listeners for this host */
-	TAILQ_HEAD(boundq, evhttp_bound_socket) sockets;
+	struct boundq sockets;
 
-	TAILQ_HEAD(httpcbq, evhttp_cb) callbacks;
+	struct httpcbq callbacks;
 
 	/* All live connections on this host. */
 	struct evconq connections;
 
-	TAILQ_HEAD(vhostsq, evhttp) virtualhosts;
+	struct vhostsq virtualhosts;
 
-	TAILQ_HEAD(aliasq, evhttp_server_alias) aliases;
+	struct aliasq aliases;
 
 	/* NULL if this server is not a vhost */
 	char *vhost_pattern;
 
-	int timeout;
+	struct timeval timeout;
 
 	size_t default_max_headers_size;
 	ev_uint64_t default_max_body_size;
+	const char *default_content_type;
 
 	/* Bitmask of all HTTP methods that we accept and pass to user
 	 * callbacks. */
@@ -165,6 +179,8 @@ struct evhttp {
 	   don't match. */
 	void (*gencb)(struct evhttp_request *req, void *);
 	void *gencbarg;
+	struct bufferevent* (*bevcb)(struct event_base *, void *);
+	void *bevcbarg;
 
 	struct event_base *base;
 };
@@ -172,24 +188,31 @@ struct evhttp {
 /* XXX most of these functions could be static. */
 
 /* resets the connection; can be reused for more requests */
-void evhttp_connection_reset(struct evhttp_connection *);
+void evhttp_connection_reset_(struct evhttp_connection *);
 
 /* connects if necessary */
-int evhttp_connection_connect(struct evhttp_connection *);
+int evhttp_connection_connect_(struct evhttp_connection *);
 
+enum evhttp_request_error;
 /* notifies the current request that it failed; resets connection */
-void evhttp_connection_fail(struct evhttp_connection *,
-    enum evhttp_connection_error error);
+void evhttp_connection_fail_(struct evhttp_connection *,
+    enum evhttp_request_error error);
 
 enum message_read_status;
 
-enum message_read_status evhttp_parse_firstline(struct evhttp_request *, struct evbuffer*);
-enum message_read_status evhttp_parse_headers(struct evhttp_request *, struct evbuffer*);
+enum message_read_status evhttp_parse_firstline_(struct evhttp_request *, struct evbuffer*);
+enum message_read_status evhttp_parse_headers_(struct evhttp_request *, struct evbuffer*);
 
-void evhttp_start_read(struct evhttp_connection *);
+void evhttp_start_read_(struct evhttp_connection *);
 
 /* response sending HTML the data in the buffer */
-void evhttp_response_code(struct evhttp_request *, int, const char *);
-void evhttp_send_page(struct evhttp_request *, struct evbuffer *);
+void evhttp_response_code_(struct evhttp_request *, int, const char *);
+void evhttp_send_page_(struct evhttp_request *, struct evbuffer *);
 
+int evhttp_decode_uri_internal(const char *uri, size_t length,
+    char *ret, int decode_plus);
+
+#ifdef __cplusplus
+}
+#endif
 #endif /* _HTTP_H */

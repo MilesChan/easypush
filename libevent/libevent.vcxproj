@@ -51,9 +51,14 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.;WIN32-Code;include;compat;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;HAVE_CONFIG_H;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.;WIN32-Code;WIN32-Code\nmake;include;compat;</AdditionalIncludeDirectories>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -107,6 +112,7 @@
     <ClCompile Include="evthread_win32.c" />
     <ClCompile Include="evutil.c" />
     <ClCompile Include="evutil_rand.c" />
+    <ClCompile Include="evutil_time.c" />
     <ClCompile Include="http.c" />
     <ClCompile Include="listener.c" />
     <ClCompile Include="log.c" />
@@ -120,16 +126,11 @@
     <ClInclude Include="compat\sys\queue.h" />
     <ClInclude Include="defer-internal.h" />
     <ClInclude Include="evbuffer-internal.h" />
-    <ClInclude Include="evdns.h" />
     <ClInclude Include="event-internal.h" />
-    <ClInclude Include="event.h" />
-    <ClInclude Include="evhttp.h" />
     <ClInclude Include="evmap-internal.h" />
     <ClInclude Include="evrpc-internal.h" />
-    <ClInclude Include="evrpc.h" />
     <ClInclude Include="evsignal-internal.h" />
     <ClInclude Include="evthread-internal.h" />
-    <ClInclude Include="evutil.h" />
     <ClInclude Include="ht-internal.h" />
     <ClInclude Include="http-internal.h" />
     <ClInclude Include="include\event2\buffer.h" />

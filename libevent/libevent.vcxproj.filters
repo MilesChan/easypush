@@ -93,6 +93,9 @@
     <ClCompile Include="win32select.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="evutil_time.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bufferevent-internal.h">
@@ -107,22 +110,10 @@
     <ClInclude Include="evbuffer-internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="evdns.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="event.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="event-internal.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="evhttp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="evmap-internal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="evrpc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="evrpc-internal.h">
@@ -132,9 +123,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="evthread-internal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="evutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ht-internal.h">

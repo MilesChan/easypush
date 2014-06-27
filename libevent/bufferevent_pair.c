@@ -23,14 +23,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "event2/event-config.h"
+#include "evconfig-private.h"
 
 #include <sys/types.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <winsock2.h>
 #endif
-
-#include "event2/event-config.h"
 
 #include "event2/util.h"
 #include "event2/buffer.h"
@@ -50,7 +50,7 @@ struct bufferevent_pair {
 
 /* Given a bufferevent that's really a bev part of a bufferevent_pair,
  * return that bufferevent_filtered. Returns NULL otherwise.*/
-static _EVENT_inline struct bufferevent_pair *
+static inline struct bufferevent_pair *
 upcast(struct bufferevent *bev)
 {
 	struct bufferevent_pair *bev_p;
@@ -63,23 +63,23 @@ upcast(struct bufferevent *bev)
 
 #define downcast(bev_pair) (&(bev_pair)->bev.bev)
 
-static _EVENT_inline void
+static inline void
 incref_and_lock(struct bufferevent *b)
 {
 	struct bufferevent_pair *bevp;
-	_bufferevent_incref_and_lock(b);
+	bufferevent_incref_and_lock_(b);
 	bevp = upcast(b);
 	if (bevp->partner)
-		_bufferevent_incref_and_lock(downcast(bevp->partner));
+		bufferevent_incref_and_lock_(downcast(bevp->partner));
 }
 
-static _EVENT_inline void
+static inline void
 decref_and_unlock(struct bufferevent *b)
 {
 	struct bufferevent_pair *bevp = upcast(b);
 	if (bevp->partner)
-		_bufferevent_decref_and_unlock(downcast(bevp->partner));
-	_bufferevent_decref_and_unlock(b);
+		bufferevent_decref_and_unlock_(downcast(bevp->partner));
+	bufferevent_decref_and_unlock_(b);
 }
 
 /* XXX Handle close */
@@ -92,10 +92,10 @@ bufferevent_pair_elt_new(struct event_base *base,
     int options)
 {
 	struct bufferevent_pair *bufev;
-	if (! (bufev = mm_calloc(1, sizeof(struct bufferevent_pair))))
+	if (! (bufev = (struct bufferevent_pair *)mm_calloc(1, sizeof(struct bufferevent_pair))))
 		return NULL;
-	if (bufferevent_init_common(&bufev->bev, base, &bufferevent_ops_pair,
-		options)) {
+	if (bufferevent_init_common_(&bufev->bev, base, &bufferevent_ops_pair,
+		(enum bufferevent_options)options)) {
 		mm_free(bufev);
 		return NULL;
 	}
@@ -104,7 +104,7 @@ bufferevent_pair_elt_new(struct event_base *base,
 		return NULL;
 	}
 
-	_bufferevent_init_generic_timeout_cbs(&bufev->bev.bev);
+	bufferevent_init_generic_timeout_cbs_(&bufev->bev.bev);
 
 	return bufev;
 }
@@ -130,7 +130,7 @@ bufferevent_pair_new(struct event_base *base, int options,
 
 	if (options & BEV_OPT_THREADSAFE) {
 		/*XXXX check return */
-		bufferevent_enable_locking(downcast(bufev2), bufev1->bev.lock);
+		bufferevent_enable_locking_(downcast(bufev2), bufev1->bev.lock);
 	}
 
 	bufev1->partner = bufev2;
@@ -151,7 +151,7 @@ static void
 be_pair_transfer(struct bufferevent *src, struct bufferevent *dst,
     int ignore_wm)
 {
-	size_t src_size, dst_size;
+	size_t dst_size;
 	size_t n;
 
 	evbuffer_unfreeze(src->output, 1);
@@ -182,21 +182,14 @@ be_pair_transfer(struct bufferevent *src, struct bufferevent *dst,
 			BEV_DEL_GENERIC_WRITE_TIMEOUT(dst);
 	}
 
-	src_size = evbuffer_get_length(src->output);
-	dst_size = evbuffer_get_length(dst->input);
-
-	if (dst_size >= dst->wm_read.low) {
-		_bufferevent_run_readcb(dst);
-	}
-	if (src_size <= src->wm_write.low) {
-		_bufferevent_run_writecb(src);
-	}
+	bufferevent_trigger_nolock_(dst, EV_READ, 0);
+	bufferevent_trigger_nolock_(src, EV_WRITE, 0);
 done:
 	evbuffer_freeze(src->output, 1);
 	evbuffer_freeze(dst->input, 0);
 }
 
-static _EVENT_inline int
+static inline int
 be_pair_wants_to_talk(struct bufferevent_pair *src,
     struct bufferevent_pair *dst)
 {
@@ -210,7 +203,7 @@ static void
 be_pair_outbuf_cb(struct evbuffer *outbuf,
     const struct evbuffer_cb_info *info, void *arg)
 {
-	struct bufferevent_pair *bev_pair = arg;
+	struct bufferevent_pair *bev_pair = (struct bufferevent_pair *)arg;
 	struct bufferevent_pair *partner = bev_pair->partner;
 
 	incref_and_lock(downcast(bev_pair));
@@ -260,13 +253,14 @@ be_pair_disable(struct bufferevent *bev, short events)
 	if (events & EV_READ) {
 		BEV_DEL_GENERIC_READ_TIMEOUT(bev);
 	}
-	if (events & EV_WRITE)
+	if (events & EV_WRITE) {
 		BEV_DEL_GENERIC_WRITE_TIMEOUT(bev);
+	}
 	return 0;
 }
 
 static void
-be_pair_destruct(struct bufferevent *bev)
+be_pair_unlink(struct bufferevent *bev)
 {
 	struct bufferevent_pair *bev_p = upcast(bev);
 
@@ -274,8 +268,6 @@ be_pair_destruct(struct bufferevent *bev)
 		bev_p->partner->partner = NULL;
 		bev_p->partner = NULL;
 	}
-
-	_bufferevent_del_generic_timeout_cbs(bev);
 }
 
 static int
@@ -300,7 +292,7 @@ be_pair_flush(struct bufferevent *bev, short iotype,
 		be_pair_transfer(bev, partner, 1);
 
 	if (mode == BEV_FINISHED) {
-		_bufferevent_run_eventcb(partner, iotype|BEV_EVENT_EOF);
+		bufferevent_run_eventcb_(partner, iotype|BEV_EVENT_EOF, 0);
 	}
 	decref_and_unlock(bev);
 	return 0;
@@ -310,13 +302,14 @@ struct bufferevent *
 bufferevent_pair_get_partner(struct bufferevent *bev)
 {
 	struct bufferevent_pair *bev_p;
-	struct bufferevent *partner;
+	struct bufferevent *partner = NULL;
 	bev_p = upcast(bev);
 	if (! bev_p)
 		return NULL;
 
 	incref_and_lock(bev);
-	partner = downcast(bev_p->partner);
+	if (bev_p->partner)
+		partner = downcast(bev_p->partner);
 	decref_and_unlock(bev);
 	return partner;
 }
@@ -326,8 +319,9 @@ const struct bufferevent_ops bufferevent_ops_pair = {
 	evutil_offsetof(struct bufferevent_pair, bev.bev),
 	be_pair_enable,
 	be_pair_disable,
-	be_pair_destruct,
-	_bufferevent_generic_adj_timeouts,
+	be_pair_unlink,
+	NULL, /* be_pair_destruct, */
+	bufferevent_generic_adj_timeouts_,
 	be_pair_flush,
 	NULL, /* ctrl */
 };

@@ -26,6 +26,15 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "event2/event-config.h"
+#include "evconfig-private.h"
+
+#ifdef _WIN32
+
 #include <winsock2.h>
 #include <windows.h>
 #include <sys/types.h>
@@ -38,7 +47,6 @@
 #include <errno.h>
 
 #include "event2/util.h"
-#include "event2/event-config.h"
 #include "util-internal.h"
 #include "log-internal.h"
 #include "event2/event.h"
@@ -46,6 +54,7 @@
 #include "evmap-internal.h"
 #include "event2/thread.h"
 #include "evthread-internal.h"
+#include "time-internal.h"
 
 #define XFREE(ptr) do { if (ptr) mm_free(ptr); } while (0)
 
@@ -77,8 +86,8 @@ struct win32op {
 };
 
 static void *win32_init(struct event_base *);
-static int win32_add(struct event_base *, evutil_socket_t, short old, short events, void *_idx);
-static int win32_del(struct event_base *, evutil_socket_t, short old, short events, void *_idx);
+static int win32_add(struct event_base *, evutil_socket_t, short old, short events, void *idx_);
+static int win32_del(struct event_base *, evutil_socket_t, short old, short events, void *idx_);
 static int win32_dispatch(struct event_base *base, struct timeval *);
 static void win32_dealloc(struct event_base *);
 
@@ -90,7 +99,7 @@ struct eventop win32ops = {
 	win32_dispatch,
 	win32_dealloc,
 	0, /* doesn't need reinit */
-	0, /* No features supported. */
+	EV_FEATURE_UNKOWN, /* No features supported. */
 	sizeof(struct idx_info),
 };
 
@@ -106,9 +115,9 @@ grow_fd_sets(struct win32op *op, unsigned new_num_fds)
 	EVUTIL_ASSERT(new_num_fds >= 1);
 
 	size = FD_SET_ALLOC_SIZE(new_num_fds);
-	if (!(op->readset_in = mm_realloc(op->readset_in, size)))
+	if (!(op->readset_in = (struct win_fd_set *)mm_realloc(op->readset_in, size)))
 		return (-1);
-	if (!(op->writeset_in = mm_realloc(op->writeset_in, size)))
+	if (!(op->writeset_in = (struct win_fd_set *)mm_realloc(op->writeset_in, size)))
 		return (-1);
 	op->resize_out_sets = 1;
 	op->num_fds_in_fd_sets = new_num_fds;
@@ -160,7 +169,7 @@ do_fd_clear(struct event_base *base,
 		SOCKET s2;
 		s2 = set->fd_array[i] = set->fd_array[set->fd_count];
 
-		ent2 = evmap_io_get_fdinfo(&base->io, s2);
+		ent2 = (struct idx_info *)evmap_io_get_fdinfo_(&base->io, s2);
 
 		if (!ent2) /* This indicates a bug. */
 			return (0);
@@ -174,30 +183,32 @@ do_fd_clear(struct event_base *base,
 
 #define NEVENT 32
 void *
-win32_init(struct event_base *_base)
+win32_init(struct event_base *base)
 {
 	struct win32op *winop;
 	size_t size;
-	if (!(winop = mm_calloc(1, sizeof(struct win32op))))
+	if (!(winop = (struct win32op *)mm_calloc(1, sizeof(struct win32op))))
 		return NULL;
 	winop->num_fds_in_fd_sets = NEVENT;
 	size = FD_SET_ALLOC_SIZE(NEVENT);
-	if (!(winop->readset_in = mm_malloc(size)))
+	if (!(winop->readset_in = (struct win_fd_set *)mm_malloc(size)))
 		goto err;
-	if (!(winop->writeset_in = mm_malloc(size)))
+	if (!(winop->writeset_in = (struct win_fd_set *)mm_malloc(size)))
 		goto err;
-	if (!(winop->readset_out = mm_malloc(size)))
+	if (!(winop->readset_out = (struct win_fd_set *)mm_malloc(size)))
 		goto err;
-	if (!(winop->writeset_out = mm_malloc(size)))
+	if (!(winop->writeset_out = (struct win_fd_set *)mm_malloc(size)))
 		goto err;
-	if (!(winop->exset_out = mm_malloc(size)))
+	if (!(winop->exset_out = (struct win_fd_set *)mm_malloc(size)))
 		goto err;
 	winop->readset_in->fd_count = winop->writeset_in->fd_count = 0;
 	winop->readset_out->fd_count = winop->writeset_out->fd_count
 		= winop->exset_out->fd_count = 0;
 
-	if (evsig_init(_base) < 0)
+	if (evsig_init_(base) < 0)
 		winop->signals_are_broken = 1;
+
+	evutil_weakrand_seed_(&base->weakrand_seed, 0);
 
 	return (winop);
  err:
@@ -212,10 +223,10 @@ win32_init(struct event_base *_base)
 
 int
 win32_add(struct event_base *base, evutil_socket_t fd,
-			 short old, short events, void *_idx)
+			 short old, short events, void *idx_)
 {
-	struct win32op *win32op = base->evbase;
-	struct idx_info *idx = _idx;
+	struct win32op *win32op = (struct win32op *)base->evbase;
+	struct idx_info *idx = (struct idx_info *)idx_;
 
 	if ((events & EV_SIGNAL) && win32op->signals_are_broken)
 		return (-1);
@@ -237,10 +248,10 @@ win32_add(struct event_base *base, evutil_socket_t fd,
 
 int
 win32_del(struct event_base *base, evutil_socket_t fd, short old, short events,
-		  void *_idx)
+		  void *idx_)
 {
-	struct win32op *win32op = base->evbase;
-	struct idx_info *idx = _idx;
+	struct win32op *win32op = (struct win32op *)base->evbase;
+	struct idx_info *idx = (struct idx_info *)idx_;
 
 	event_debug(("%s: Removing event for "EV_SOCK_FMT,
 		__func__, EV_SOCK_ARG(fd)));
@@ -273,7 +284,7 @@ fd_set_copy(struct win_fd_set *out, const struct win_fd_set *in)
 int
 win32_dispatch(struct event_base *base, struct timeval *tv)
 {
-	struct win32op *win32op = base->evbase;
+	struct win32op *win32op = (struct win32op *)base->evbase;
 	int res = 0;
 	unsigned j, i;
 	int fd_count;
@@ -281,11 +292,11 @@ win32_dispatch(struct event_base *base, struct timeval *tv)
 
 	if (win32op->resize_out_sets) {
 		size_t size = FD_SET_ALLOC_SIZE(win32op->num_fds_in_fd_sets);
-		if (!(win32op->readset_out = mm_realloc(win32op->readset_out, size)))
+		if (!(win32op->readset_out = (struct win_fd_set *)mm_realloc(win32op->readset_out, size)))
 			return (-1);
-		if (!(win32op->exset_out = mm_realloc(win32op->exset_out, size)))
+		if (!(win32op->exset_out = (struct win_fd_set *)mm_realloc(win32op->exset_out, size)))
 			return (-1);
-		if (!(win32op->writeset_out = mm_realloc(win32op->writeset_out, size)))
+		if (!(win32op->writeset_out = (struct win_fd_set *)mm_realloc(win32op->writeset_out, size)))
 			return (-1);
 		win32op->resize_out_sets = 0;
 	}
@@ -299,7 +310,7 @@ win32_dispatch(struct event_base *base, struct timeval *tv)
 	    win32op->readset_out->fd_count : win32op->writeset_out->fd_count;
 
 	if (!fd_count) {
-		long msec = tv ? evutil_tv_to_msec(tv) : LONG_MAX;
+		long msec = tv ? evutil_tv_to_msec_(tv) : LONG_MAX;
 		/* Sleep's DWORD argument is unsigned long */
 		if (msec < 0)
 			msec = LONG_MAX;
@@ -324,42 +335,45 @@ win32_dispatch(struct event_base *base, struct timeval *tv)
 	}
 
 	if (win32op->readset_out->fd_count) {
-		i = rand() % win32op->readset_out->fd_count;
+		i = evutil_weakrand_range_(&base->weakrand_seed,
+		    win32op->readset_out->fd_count);
 		for (j=0; j<win32op->readset_out->fd_count; ++j) {
 			if (++i >= win32op->readset_out->fd_count)
 				i = 0;
 			s = win32op->readset_out->fd_array[i];
-			evmap_io_active(base, s, EV_READ);
+			evmap_io_active_(base, s, EV_READ);
 		}
 	}
 	if (win32op->exset_out->fd_count) {
-		i = rand() % win32op->exset_out->fd_count;
+		i = evutil_weakrand_range_(&base->weakrand_seed,
+		    win32op->exset_out->fd_count);
 		for (j=0; j<win32op->exset_out->fd_count; ++j) {
 			if (++i >= win32op->exset_out->fd_count)
 				i = 0;
 			s = win32op->exset_out->fd_array[i];
-			evmap_io_active(base, s, EV_WRITE);
+			evmap_io_active_(base, s, EV_WRITE);
 		}
 	}
 	if (win32op->writeset_out->fd_count) {
 		SOCKET s;
-		i = rand() % win32op->writeset_out->fd_count;
+		i = evutil_weakrand_range_(&base->weakrand_seed,
+		    win32op->writeset_out->fd_count);
 		for (j=0; j<win32op->writeset_out->fd_count; ++j) {
 			if (++i >= win32op->writeset_out->fd_count)
 				i = 0;
 			s = win32op->writeset_out->fd_array[i];
-			evmap_io_active(base, s, EV_WRITE);
+			evmap_io_active_(base, s, EV_WRITE);
 		}
 	}
 	return (0);
 }
 
 void
-win32_dealloc(struct event_base *_base)
+win32_dealloc(struct event_base *base)
 {
-	struct win32op *win32op = _base->evbase;
+	struct win32op *win32op = (struct win32op *)base->evbase;
 
-	evsig_dealloc(_base);
+	evsig_dealloc_(base);
 	if (win32op->readset_in)
 		mm_free(win32op->readset_in);
 	if (win32op->writeset_in)
@@ -372,6 +386,11 @@ win32_dealloc(struct event_base *_base)
 		mm_free(win32op->exset_out);
 	/* XXXXX free the tree. */
 
-	memset(win32op, 0, sizeof(win32op));
+	memset(win32op, 0, sizeof(*win32op));
 	mm_free(win32op);
 }
+
+#endif
+#ifdef __cplusplus
+}
+#endif

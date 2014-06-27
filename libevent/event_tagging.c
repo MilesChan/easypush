@@ -26,15 +26,16 @@
  */
 
 #include "event2/event-config.h"
+#include "evconfig-private.h"
 
-#ifdef _EVENT_HAVE_SYS_TYPES_H
+#ifdef EVENT__HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
-#ifdef _EVENT_HAVE_SYS_PARAM_H
+#ifdef EVENT__HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <windows.h>
@@ -44,7 +45,7 @@
 #endif
 
 #include <sys/queue.h>
-#ifdef _EVENT_HAVE_SYS_TIME_H
+#ifdef EVENT__HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
 
@@ -52,10 +53,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef WIN32
+#ifndef _WIN32
 #include <syslog.h>
 #endif
-#ifdef _EVENT_HAVE_UNISTD_H
+#ifdef EVENT__HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 #include <limits.h>
@@ -135,13 +136,13 @@ evtag_init(void)
 	return ((off + 1) / 2);						\
 } while (0)
 
-static _EVENT_inline int
+static inline int
 encode_int_internal(ev_uint8_t *data, ev_uint32_t number)
 {
 	ENCODE_INT_INTERNAL(data, number);
 }
 
-static _EVENT_inline int
+static inline int
 encode_int64_internal(ev_uint8_t *data, ev_uint64_t number)
 {
 	ENCODE_INT_INTERNAL(data, number);
@@ -209,7 +210,14 @@ decode_tag_internal(ev_uint32_t *ptag, struct evbuffer *evbuf, int dodrain)
 
 	while (count++ < len) {
 		ev_uint8_t lower = *data++;
-		number |= (lower & 0x7f) << shift;
+		if (shift >= 28) {
+			/* Make sure it fits into 32 bits */
+			if (shift > 28)
+				return (-1);
+			if ((lower & 0x7f) > 15)
+				return (-1);
+		}
+		number |= (lower & (unsigned)0x7f) << shift;
 		shift += 7;
 
 		if (!(lower & 0x80)) {
@@ -550,7 +558,7 @@ evtag_unmarshal_string(struct evbuffer *evbuf, ev_uint32_t need_tag,
 	    tag != need_tag)
 		return (-1);
 
-	*pstring = mm_malloc(tag_len + 1);
+	*pstring = (char*)mm_malloc(tag_len + 1);
 	if (*pstring == NULL) {
 		event_warn("%s: malloc", __func__);
 		return -1;
